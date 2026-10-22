@@ -11,7 +11,7 @@ A menu-management application with a searchable hierarchical tree, drag-and-drop
 
 ## Preview
 
-![Menu tree desktop demo](frontend/public/menu-tree-demo.png)
+![Menu tree captured from localhost:3000](frontend/public/menu-tree-localhost-3000.png)
 
 ## Requirements
 
