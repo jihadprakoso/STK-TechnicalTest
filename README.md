@@ -9,6 +9,10 @@ A menu-management application with a searchable hierarchical tree, drag-and-drop
 - **API documentation:** Swagger UI at `/swagger/index.html`.
 - **Database schema:** versioned SQL migrations in `backend/migrations`.
 
+## Preview
+
+![Menu tree desktop demo](frontend/public/menu-tree-demo.png)
+
 ## Requirements
 
 - Go 1.27 or later
