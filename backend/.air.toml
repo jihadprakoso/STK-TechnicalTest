@@ -1,0 +1,16 @@
+root = "."
+tmp_dir = "tmp"
+
+[build]
+cmd = "go build -o ./tmp/server ./cmd/server"
+bin = "./tmp/server"
+include_ext = ["go", "yaml", "yml"]
+exclude_dir = ["docs", "migrations", "tmp"]
+delay = 500
+stop_on_error = true
+
+[log]
+time = true
+
+[misc]
+clean_on_exit = true

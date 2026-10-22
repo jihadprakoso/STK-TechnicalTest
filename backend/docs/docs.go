@@ -306,6 +306,59 @@ const docTemplate = `{
                     }
                 }
             }
+        },
+        "/menus/{id}/reorder": {
+            "patch": {
+                "description": "Mengubah posisi menu di antara sibling pada parent yang sama.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "menus"
+                ],
+                "summary": "Reorder menu within its level",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Menu ID (UUID)",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Posisi baru berbasis 0",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handler.ReorderMenuRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/model.Menu"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ErrorResponse"
+                        }
+                    }
+                }
+            }
         }
     },
     "definitions": {
@@ -345,6 +398,19 @@ const docTemplate = `{
                     "type": "string",
                     "example": "8af03526-7a4b-4c6b-8cfd-90c05d0f0ad1"
                 },
+                "position": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "example": 1
+                }
+            }
+        },
+        "handler.ReorderMenuRequest": {
+            "type": "object",
+            "required": [
+                "position"
+            ],
+            "properties": {
                 "position": {
                     "type": "integer",
                     "minimum": 0,

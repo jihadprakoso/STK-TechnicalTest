@@ -1,3 +1,5 @@
+@import "tailwindcss";
+
 :root {
   --background: #ffffff;
   --foreground: #1e293b;
@@ -303,6 +305,23 @@ h1 {
 
 .tree-panel {
   min-width: 0;
+}
+
+.tree-search {
+  width: 100%;
+  min-height: 36px;
+  margin-bottom: 10px;
+  padding: 0 12px;
+  border: 1px solid #dbe2ec;
+  border-radius: 18px;
+  color: #263448;
+  background: #fff;
+  font-size: 12px;
+}
+
+.tree-search:focus-visible {
+  outline: 2px solid #4b8bd8;
+  outline-offset: 2px;
 }
 
 .tree-controls {
@@ -1426,6 +1445,13 @@ h1 {
     margin-bottom: 26px;
   }
 
+  .tree-search {
+    min-height: 42px;
+    margin-bottom: 12px;
+    padding: 0 14px;
+    font-size: 14px;
+  }
+
   .expand-button,
   .collapse-button {
     flex: 1 1 0;
@@ -1436,7 +1462,11 @@ h1 {
   }
 
   .add-root-button {
-    display: none;
+    display: grid;
+    flex: 0 0 42px;
+    width: 42px;
+    height: 42px;
+    margin-left: 0;
   }
 
   .tree-content {

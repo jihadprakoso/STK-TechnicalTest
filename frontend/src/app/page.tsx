@@ -2,15 +2,7 @@
 
 import Image from "next/image";
 import { DragEvent, FormEvent, useCallback, useEffect, useMemo, useState } from "react";
-
-type Menu = {
-  id: string;
-  name: string;
-  parent_id: string | null;
-  depth: number;
-  position: number;
-  children: Menu[];
-};
+import type { Menu } from "./types";
 
 type DialogState = { parent: Menu | null } | null;
 type DropPosition = "before" | "inside" | "after";
@@ -50,6 +42,24 @@ function findMenu(nodes: Menu[], id: string): Menu | null {
 
 function allMenuIDs(nodes: Menu[]): string[] {
   return nodes.flatMap((node) => [node.id, ...allMenuIDs(node.children)]);
+}
+
+function filterMenuTree(nodes: Menu[], query: string): Menu[] {
+  const normalizedQuery = query.trim().toLowerCase();
+  if (!normalizedQuery) return nodes;
+
+  return nodes.flatMap((node) => {
+    const children = filterMenuTree(node.children, normalizedQuery);
+    if (!node.name.toLowerCase().includes(normalizedQuery) && children.length === 0) return [];
+    return [{ ...node, children }];
+  });
+}
+
+function expandableMenuIDs(nodes: Menu[]): string[] {
+  return nodes.flatMap((node) => [
+    ...(node.children.length ? [node.id] : []),
+    ...expandableMenuIDs(node.children),
+  ]);
 }
 
 function siblingMenus(nodes: Menu[], parentID: string | null): Menu[] {
@@ -218,6 +228,7 @@ export default function Home() {
   const [draftName, setDraftName] = useState<{ id: string; value: string } | null>(null);
   const [dialog, setDialog] = useState<DialogState>(null);
   const [newName, setNewName] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
@@ -264,7 +275,12 @@ export default function Home() {
 
   const selectedMenu = useMemo(() => findMenu(menus, selectedID), [menus, selectedID]);
   const selectedRoot = menus.find((menu) => menu.id === selectedRootID) ?? null;
-  const menuTree = selectedRoot ? [selectedRoot] : [];
+  const menuTree = useMemo(() => selectedRoot ? [selectedRoot] : [], [selectedRoot]);
+  const filteredMenuTree = useMemo(() => filterMenuTree(menuTree, searchQuery), [menuTree, searchQuery]);
+  const visibleExpanded = useMemo(() => {
+    if (!searchQuery.trim()) return expanded;
+    return new Set([...expanded, ...expandableMenuIDs(filteredMenuTree)]);
+  }, [expanded, filteredMenuTree, searchQuery]);
   const selectedParent = selectedMenu?.parent_id
     ? findMenu(menus, selectedMenu.parent_id)
     : null;
@@ -382,11 +398,10 @@ export default function Home() {
         const targetIndex = orderedIDs.indexOf(target.id);
         if (targetIndex === -1) return;
         const positionIndex = targetIndex + (position === "after" ? 1 : 0);
-        orderedIDs.splice(positionIndex, 0, sourceID);
         if (source.parent_id === target.parent_id) {
-          await request<void>("/menus/reorder", {
-            method: "PUT",
-            body: JSON.stringify({ parent_id: target.parent_id, menu_ids: orderedIDs }),
+          await request<Menu>(`/menus/${sourceID}/reorder`, {
+            method: "PATCH",
+            body: JSON.stringify({ position: positionIndex }),
           });
           setNotice("Urutan menu berhasil diperbarui.");
         } else {
@@ -417,11 +432,9 @@ export default function Home() {
     setNotice("");
     try {
       if (source.parent_id === null) {
-        const orderedIDs = menus.map((menu) => menu.id).filter((id) => id !== sourceID);
-        orderedIDs.push(sourceID);
-        await request<void>("/menus/reorder", {
-          method: "PUT",
-          body: JSON.stringify({ parent_id: null, menu_ids: orderedIDs }),
+        await request<Menu>(`/menus/${sourceID}/reorder`, {
+          method: "PATCH",
+          body: JSON.stringify({ position: menus.length - 1 }),
         });
         setNotice("Urutan menu utama berhasil diperbarui.");
       } else {
@@ -488,7 +501,11 @@ export default function Home() {
             <span>/</span>
             <strong>Menus</strong>
           </div>
-          <button aria-label="Menu" className="mobile-menu-button" type="button">
+          <button
+            aria-label="Menu"
+            className="mobile-menu-button focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2"
+            type="button"
+          >
             <Image src="/menu_open.svg" alt="" width={24} height={24} />
           </button>
         </header>
@@ -532,6 +549,14 @@ export default function Home() {
 
           <div className="manager-grid">
             <section aria-label="Pohon menu" className="tree-panel">
+              <input
+                aria-label="Search menus"
+                className="tree-search"
+                onChange={(event) => setSearchQuery(event.target.value)}
+                placeholder="Search menus..."
+                type="search"
+                value={searchQuery}
+              />
               <div className="tree-controls">
                 <button className="expand-button" onClick={expandAll} type="button">Expand All</button>
                 <button className="collapse-button" onClick={collapseAll} type="button">Collapse All</button>
@@ -544,7 +569,7 @@ export default function Home() {
               <div className="tree-content">
                 {loading ? (
                   <div className="loading-state"><span className="spinner" /> Loading menus...</div>
-                ) : menuTree.length ? (
+                ) : filteredMenuTree.length ? (
                   <>
                     {draggingMenu && (
                       <div
@@ -563,8 +588,8 @@ export default function Home() {
                       </div>
                     )}
                     <MenuTree
-                      nodes={menuTree}
-                      expanded={expanded}
+                      nodes={filteredMenuTree}
+                      expanded={visibleExpanded}
                       selectedID={selectedID}
                       onToggle={toggleMenu}
                       onSelect={(menu) => setSelectedID(menu.id)}
@@ -576,6 +601,11 @@ export default function Home() {
                       onDropTargetChange={setDropTargetID}
                     />
                   </>
+                ) : menuTree.length ? (
+                  <div className="empty-state">
+                    <span>No menus match &quot;{searchQuery.trim()}&quot;</span>
+                    <button onClick={() => setSearchQuery("")} type="button">Clear search</button>
+                  </div>
                 ) : (
                   <div className="empty-state">
                     <span>No menus found</span>

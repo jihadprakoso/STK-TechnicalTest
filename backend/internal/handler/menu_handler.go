@@ -26,6 +26,7 @@ func (h *MenuHandler) Register(r *gin.RouterGroup) {
 	g.PUT("/:id", h.update)
 	g.DELETE("/:id", h.delete)
 	g.PATCH("/:id/move", h.move)
+	g.PATCH("/:id/reorder", h.reorderOne)
 	g.PUT("/reorder", h.reorder)
 }
 
@@ -64,6 +65,10 @@ type MoveMenuRequest struct {
 type ReorderMenusRequest struct {
 	ParentID *string  `json:"parent_id" binding:"omitempty,uuid" example:"8af03526-7a4b-4c6b-8cfd-90c05d0f0ad1"`
 	MenuIDs  []string `json:"menu_ids" binding:"required,dive,uuid" example:"8af03526-7a4b-4c6b-8cfd-90c05d0f0ad1,9465f973-2aa8-473d-b391-9b3027f2a2bb"`
+}
+
+type ReorderMenuRequest struct {
+	Position *int `json:"position" binding:"required,gte=0" example:"1"`
 }
 
 type ErrorResponse struct {
@@ -223,6 +228,39 @@ func (h *MenuHandler) reorder(c *gin.Context) {
 		return
 	}
 	c.Status(http.StatusNoContent)
+}
+
+// reorderOne godoc
+// @Summary      Reorder menu within its level
+// @Description  Mengubah posisi menu di antara sibling pada parent yang sama.
+// @Tags         menus
+// @Accept       json
+// @Produce      json
+// @Param        id    path      string             true  "Menu ID (UUID)"
+// @Param        body  body      ReorderMenuRequest true  "Posisi baru berbasis 0"
+// @Success      200   {object}  model.Menu
+// @Failure      400   {object}  ErrorResponse
+// @Failure      404   {object}  ErrorResponse
+// @Router       /menus/{id}/reorder [patch]
+func (h *MenuHandler) reorderOne(c *gin.Context) {
+	id, ok := parseID(c)
+	if !ok {
+		return
+	}
+	var req ReorderMenuRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	menu, err := h.svc.GetByID(c.Request.Context(), id)
+	if err == nil {
+		menu, err = h.svc.Move(c.Request.Context(), id, menu.ParentID, *req.Position)
+	}
+	if err != nil {
+		respondError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, menu)
 }
 
 // Pastikan :id di URL berformat UUID yang valid

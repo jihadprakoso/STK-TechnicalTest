@@ -1,15 +1,67 @@
 services:
   db:
     image: postgres:16-alpine
-    container_name: menu_db
     environment:
-      POSTGRES_USER: menu
-      POSTGRES_PASSWORD: menu
-      POSTGRES_DB: menu_db
+      POSTGRES_USER: ${POSTGRES_USER:-menu}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-menu}
+      POSTGRES_DB: ${POSTGRES_DB:-menu_db}
     ports:
-      - "5432:5432"
+      - "${POSTGRES_PORT:-5432}:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-menu} -d ${POSTGRES_DB:-menu_db}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  migrate:
+    image: migrate/migrate:v4.18.3
+    command:
+      - -path=/migrations
+      - -database=postgres://${POSTGRES_USER:-menu}:${POSTGRES_PASSWORD:-menu}@db:5432/${POSTGRES_DB:-menu_db}?sslmode=disable
+      - up
+    volumes:
+      - ./backend/migrations:/migrations:ro
+    depends_on:
+      db:
+        condition: service_healthy
+
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+      target: development
+    environment:
+      PORT: 8080
+      DATABASE_URL: postgres://${POSTGRES_USER:-menu}:${POSTGRES_PASSWORD:-menu}@db:5432/${POSTGRES_DB:-menu_db}?sslmode=disable
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./backend:/app
+      - backend_go_modules:/go/pkg/mod
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+      target: development
+    environment:
+      NEXT_PUBLIC_API_URL: http://localhost:8080/api
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./frontend:/app
+      - frontend_node_modules:/app/node_modules
+      - frontend_next:/app/.next
+    depends_on:
+      - backend
 
 volumes:
   pgdata:
+  backend_go_modules:
+  frontend_node_modules:
+  frontend_next:

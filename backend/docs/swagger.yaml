@@ -30,6 +30,15 @@ definitions:
     required:
     - position
     type: object
+  handler.ReorderMenuRequest:
+    properties:
+      position:
+        example: 1
+        minimum: 0
+        type: integer
+    required:
+    - position
+    type: object
   handler.ReorderMenusRequest:
     properties:
       menu_ids:
@@ -262,6 +271,41 @@ paths:
           schema:
             $ref: '#/definitions/handler.ErrorResponse'
       summary: Move menu
+      tags:
+      - menus
+  /menus/{id}/reorder:
+    patch:
+      consumes:
+      - application/json
+      description: Mengubah posisi menu di antara sibling pada parent yang sama.
+      parameters:
+      - description: Menu ID (UUID)
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Posisi baru berbasis 0
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/handler.ReorderMenuRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.Menu'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+      summary: Reorder menu within its level
       tags:
       - menus
   /menus/reorder:

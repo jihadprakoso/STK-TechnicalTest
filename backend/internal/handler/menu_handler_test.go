@@ -169,6 +169,64 @@ func TestMenuHandlerListRepositoryError(t *testing.T) {
 func TestMenuHandlerMoveAndReorder(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
+	t.Run("reorder one menu within siblings", func(t *testing.T) {
+		parentID := "00000000-0000-4000-8000-000000000002"
+		secondID := "00000000-0000-4000-8000-000000000003"
+		repo := &handlerMenuRepository{
+			menus: []model.Menu{
+				{ID: parentID, Name: "Parent", Position: 0},
+				{ID: testMenuID, Name: "First", ParentID: &parentID, Depth: 1, Position: 0},
+				{ID: secondID, Name: "Second", ParentID: &parentID, Depth: 1, Position: 1},
+			},
+		}
+		recorder := httptest.NewRecorder()
+		request := httptest.NewRequest(
+			http.MethodPatch,
+			"/api/menus/"+testMenuID+"/reorder",
+			strings.NewReader(`{"position":1}`),
+		)
+
+		newTestRouter(repo).ServeHTTP(recorder, request)
+
+		if recorder.Code != http.StatusOK {
+			t.Fatalf("status = %d, want %d; body: %s", recorder.Code, http.StatusOK, recorder.Body.String())
+		}
+		if repo.menus[1].Position != 1 {
+			t.Errorf("unexpected sibling positions after reorder: %#v", repo.menus)
+		}
+	})
+
+	t.Run("reject invalid reorder position", func(t *testing.T) {
+		repo := &handlerMenuRepository{menus: []model.Menu{{ID: testMenuID, Name: "Menu"}}}
+		recorder := httptest.NewRecorder()
+		request := httptest.NewRequest(
+			http.MethodPatch,
+			"/api/menus/"+testMenuID+"/reorder",
+			strings.NewReader(`{"position":-1}`),
+		)
+
+		newTestRouter(repo).ServeHTTP(recorder, request)
+
+		if recorder.Code != http.StatusBadRequest {
+			t.Fatalf("status = %d, want %d; body: %s", recorder.Code, http.StatusBadRequest, recorder.Body.String())
+		}
+	})
+
+	t.Run("reject missing menu when reordering", func(t *testing.T) {
+		recorder := httptest.NewRecorder()
+		request := httptest.NewRequest(
+			http.MethodPatch,
+			"/api/menus/"+testMenuID+"/reorder",
+			strings.NewReader(`{"position":0}`),
+		)
+
+		newTestRouter(&handlerMenuRepository{}).ServeHTTP(recorder, request)
+
+		if recorder.Code != http.StatusNotFound {
+			t.Fatalf("status = %d, want %d; body: %s", recorder.Code, http.StatusNotFound, recorder.Body.String())
+		}
+	})
+
 	t.Run("move menu", func(t *testing.T) {
 		parentID := "00000000-0000-4000-8000-000000000002"
 		repo := &handlerMenuRepository{
