@@ -13,6 +13,8 @@ A menu-management application with a searchable hierarchical tree, drag-and-drop
 
 ![Menu tree captured from localhost:3000](frontend/public/menu-tree-localhost-3000.png)
 
+![Menu tree mobile view captured from localhost:3000](frontend/public/menu-tree-mobile-localhost-3000.png)
+
 ## Requirements
 
 - Go 1.27 or later
