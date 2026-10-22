@@ -1,0 +1,15 @@
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: menu_db
+    environment:
+      POSTGRES_USER: menu
+      POSTGRES_PASSWORD: menu
+      POSTGRES_DB: menu_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+volumes:
+  pgdata:
